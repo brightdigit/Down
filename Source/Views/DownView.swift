@@ -41,10 +41,11 @@ open class DownView: WKWebView {
         }
 
         super.init(frame: frame, configuration: configuration ?? WKWebViewConfiguration())
-
+      if #available(OSX 10.11, *) {
         #if os(macOS)
-            setupMacEnvironment()
+        setupMacEnvironment()
         #endif
+      }
 
         if openLinksInBrowser || didLoadSuccessfully != nil { navigationDelegate = self }
         try loadHTMLView(markdownString)
@@ -54,11 +55,10 @@ open class DownView: WKWebView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    #if os(macOS)
+    @available(macOS 10.11, *)
     deinit {
         clearTemporaryDirectory()
     }
-    #endif
     
     // MARK: - API
     
@@ -111,12 +111,12 @@ private extension DownView {
         let htmlString = try markdownString.toHTML(options)
         let pageHTMLString = try htmlFromTemplate(htmlString)
 
-        #if os(iOS)
-            loadHTMLString(pageHTMLString, baseURL: baseURL)
-        #elseif os(macOS)
-            let indexURL = try createTemporaryBundle(pageHTMLString: pageHTMLString)
-            loadFileURL(indexURL, allowingReadAccessTo: indexURL.deletingLastPathComponent())
-        #endif
+      if #available(iOS 9.0, *) {
+        loadHTMLString(pageHTMLString, baseURL: baseURL)
+      } else if #available(macOS 10.11, *) {
+        let indexURL = try createTemporaryBundle(pageHTMLString: pageHTMLString)
+        loadFileURL(indexURL, allowingReadAccessTo: indexURL.deletingLastPathComponent())
+      }
     }
 
     func htmlFromTemplate(_ htmlString: String) throws -> String {
@@ -124,7 +124,7 @@ private extension DownView {
         return template.replacingOccurrences(of: "DOWN_HTML", with: htmlString)
     }
 
-    #if os(macOS)
+    @available(macOS 10.11, *)
     func createTemporaryBundle(pageHTMLString: String) throws -> URL {
         guard let bundleResourceURL = bundle.resourceURL
             else { throw DownErrors.nonStandardBundleFormatError }
@@ -141,7 +141,8 @@ private extension DownView {
 
         return indexURL
     }
-
+  
+    @available(macOS 10.11, *)
     func setupMacEnvironment() {
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(clearTemporaryDirectory),
@@ -149,11 +150,11 @@ private extension DownView {
                                                object: nil)
     }
 
+    @available(macOS 10.11, *)
     @objc
     func clearTemporaryDirectory() {
         try? FileManager.default.removeItem(at: temporaryDirectoryURL)
     }
-    #endif
 
 }
 
