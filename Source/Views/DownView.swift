@@ -15,6 +15,7 @@ import WebKit
 
 public typealias DownViewClosure = () -> ()
 
+@available(macOS 10.11, iOS 9.0, *)
 open class DownView: WKWebView {
 
     /// Initializes a web view with the results of rendering a CommonMark Markdown string
@@ -41,11 +42,10 @@ open class DownView: WKWebView {
         }
 
         super.init(frame: frame, configuration: configuration ?? WKWebViewConfiguration())
-      if #available(OSX 10.11, *) {
+      
         #if os(macOS)
         setupMacEnvironment()
         #endif
-      }
 
         if openLinksInBrowser || didLoadSuccessfully != nil { navigationDelegate = self }
         try loadHTMLView(markdownString)
@@ -55,10 +55,11 @@ open class DownView: WKWebView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    @available(macOS 10.11, *)
+  #if os(macOS)
     deinit {
         clearTemporaryDirectory()
     }
+  #endif
     
     // MARK: - API
     
@@ -105,18 +106,19 @@ open class DownView: WKWebView {
 
 // MARK: - Private API
 
+@available(macOS 10.11, iOS 9.0, *)
 private extension DownView {
-
+  
     func loadHTMLView(_ markdownString: String) throws {
         let htmlString = try markdownString.toHTML(options)
         let pageHTMLString = try htmlFromTemplate(htmlString)
 
-      if #available(iOS 9.0, *) {
+      #if os(iOS)
         loadHTMLString(pageHTMLString, baseURL: baseURL)
-      } else if #available(macOS 10.11, *) {
+      #elseif os(macOS)
         let indexURL = try createTemporaryBundle(pageHTMLString: pageHTMLString)
         loadFileURL(indexURL, allowingReadAccessTo: indexURL.deletingLastPathComponent())
-      }
+      #endif
     }
 
     func htmlFromTemplate(_ htmlString: String) throws -> String {
@@ -124,7 +126,7 @@ private extension DownView {
         return template.replacingOccurrences(of: "DOWN_HTML", with: htmlString)
     }
 
-    @available(macOS 10.11, *)
+  #if os(macOS)
     func createTemporaryBundle(pageHTMLString: String) throws -> URL {
         guard let bundleResourceURL = bundle.resourceURL
             else { throw DownErrors.nonStandardBundleFormatError }
@@ -141,25 +143,25 @@ private extension DownView {
 
         return indexURL
     }
-  
-    @available(macOS 10.11, *)
     func setupMacEnvironment() {
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(clearTemporaryDirectory),
                                                name: NSApplication.willTerminateNotification,
                                                object: nil)
     }
-
-    @available(macOS 10.11, *)
+  
     @objc
     func clearTemporaryDirectory() {
         try? FileManager.default.removeItem(at: temporaryDirectoryURL)
     }
 
+  #endif
+  
 }
 
 // MARK: - WKNavigationDelegate
 
+@available(macOS 10.11, iOS 9.0, *)
 extension DownView: WKNavigationDelegate {
     public func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
         decisionHandler(.allow)
