@@ -44,7 +44,7 @@ open class DownView: WKWebView {
         super.init(frame: frame, configuration: configuration ?? WKWebViewConfiguration())
       
         #if os(macOS)
-        setupMacEnvironment()
+            setupMacEnvironment()
         #endif
 
         if openLinksInBrowser || didLoadSuccessfully != nil { navigationDelegate = self }
@@ -96,7 +96,7 @@ open class DownView: WKWebView {
     private lazy var temporaryDirectoryURL: URL = {
         return try! FileManager.default.url(for: .itemReplacementDirectory,
                                             in: .userDomainMask,
-                                            appropriateFor: URL(fileURLWithPath: "/"),
+                                            appropriateFor: URL(fileURLWithPath: NSTemporaryDirectory()),
                                             create: true).appendingPathComponent("Down", isDirectory: true)
     }()
     #endif
@@ -113,12 +113,12 @@ private extension DownView {
         let htmlString = try markdownString.toHTML(options)
         let pageHTMLString = try htmlFromTemplate(htmlString)
 
-      #if os(iOS)
-        loadHTMLString(pageHTMLString, baseURL: baseURL)
-      #elseif os(macOS)
-        let indexURL = try createTemporaryBundle(pageHTMLString: pageHTMLString)
-        loadFileURL(indexURL, allowingReadAccessTo: indexURL.deletingLastPathComponent())
-      #endif
+        #if os(iOS)
+            loadHTMLString(pageHTMLString, baseURL: baseURL)
+        #elseif os(macOS)
+            let indexURL = try createTemporaryBundle(pageHTMLString: pageHTMLString)
+            loadFileURL(indexURL, allowingReadAccessTo: indexURL.deletingLastPathComponent())
+        #endif
     }
 
     func htmlFromTemplate(_ htmlString: String) throws -> String {
@@ -126,7 +126,7 @@ private extension DownView {
         return template.replacingOccurrences(of: "DOWN_HTML", with: htmlString)
     }
 
-  #if os(macOS)
+    #if os(macOS)
     func createTemporaryBundle(pageHTMLString: String) throws -> URL {
         guard let bundleResourceURL = bundle.resourceURL
             else { throw DownErrors.nonStandardBundleFormatError }
@@ -143,20 +143,20 @@ private extension DownView {
 
         return indexURL
     }
+
     func setupMacEnvironment() {
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(clearTemporaryDirectory),
                                                name: NSApplication.willTerminateNotification,
                                                object: nil)
     }
-  
+
     @objc
     func clearTemporaryDirectory() {
         try? FileManager.default.removeItem(at: temporaryDirectoryURL)
     }
+    #endif
 
-  #endif
-  
 }
 
 // MARK: - WKNavigationDelegate
